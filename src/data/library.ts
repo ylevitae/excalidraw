@@ -1,6 +1,6 @@
 import { loadLibraryFromBlob } from "./blob";
 import { LibraryItems, LibraryItem } from "../types";
-import { loadLibrary, saveLibrary } from "./localStorage";
+import { loadLibrary, saveLibrary } from "./indexedDB";
 
 export class Library {
   /** imports library (currently merges, removing duplicates) */

@@ -39,7 +39,7 @@ import { Tooltip } from "./Tooltip";
 
 import "./LayerUI.scss";
 import { LibraryUnit } from "./LibraryUnit";
-import { loadLibrary, saveLibrary } from "../data/localStorage";
+import { loadLibrary, saveLibrary } from "../data/indexedDB";
 import { ToolButton } from "./ToolButton";
 import { saveLibraryAsJSON, importLibraryFromJSON } from "../data/json";
 import { muteFSAbortError } from "../utils";

@@ -4,7 +4,7 @@ import { cleanAppStateForExport } from "../appState";
 
 import { fileOpen, fileSave } from "browser-nativefs";
 import { loadFromBlob } from "./blob";
-import { loadLibrary } from "./localStorage";
+import { loadLibrary } from "./indexedDB";
 import { Library } from "./library";
 
 export const serializeAsJSON = (

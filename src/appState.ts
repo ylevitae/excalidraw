@@ -170,7 +170,7 @@ const _clearAppStateForStorage = <ExportType extends "export" | "browser">(
   return stateForExport;
 };
 
-export const clearAppStateForLocalStorage = (appState: Partial<AppState>) => {
+export const clearAppStateForIndexedDB = (appState: Partial<AppState>) => {
   return _clearAppStateForStorage(appState, "browser");
 };
 

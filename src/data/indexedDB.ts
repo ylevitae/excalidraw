@@ -1,7 +1,8 @@
 import { ExcalidrawElement } from "../element/types";
 import { AppState, LibraryItems } from "../types";
-import { clearAppStateForLocalStorage, getDefaultAppState } from "../appState";
+import { clearAppStateForIndexedDB, getDefaultAppState } from "../appState";
 import { restore } from "./restore";
+import { openDB } from "idb";
 
 const LOCAL_STORAGE_KEY = "excalidraw";
 const LOCAL_STORAGE_KEY_STATE = "excalidraw-state";
@@ -9,14 +10,25 @@ const LOCAL_STORAGE_KEY_COLLAB = "excalidraw-collab";
 const LOCAL_STORAGE_KEY_LIBRARY = "excalidraw-library";
 
 let _LATEST_LIBRARY_ITEMS: LibraryItems | null = null;
-export const loadLibrary = (): Promise<LibraryItems> => {
+const getDb = (): Promise<any> => {
+  return openDB(LOCAL_STORAGE_KEY, undefined, {
+    async upgrade(db) {
+      db.createObjectStore(LOCAL_STORAGE_KEY);
+    },
+  });
+};
+
+export const loadLibrary = async (): Promise<LibraryItems> => {
   return new Promise(async (resolve) => {
     if (_LATEST_LIBRARY_ITEMS) {
       return resolve(JSON.parse(JSON.stringify(_LATEST_LIBRARY_ITEMS)));
     }
 
     try {
-      const data = localStorage.getItem(LOCAL_STORAGE_KEY_LIBRARY);
+      const store = (await getDb())
+        .transaction(LOCAL_STORAGE_KEY, "readwrite")
+        .objectStore(LOCAL_STORAGE_KEY);
+      const data = await store.get(LOCAL_STORAGE_KEY_LIBRARY);
       if (!data) {
         return resolve([]);
       }
@@ -36,35 +48,42 @@ export const loadLibrary = (): Promise<LibraryItems> => {
   });
 };
 
-export const saveLibrary = (items: LibraryItems) => {
+export const saveLibrary = async (items: LibraryItems) => {
+  const store = (await getDb())
+    .transaction(LOCAL_STORAGE_KEY, "readwrite")
+    .objectStore(LOCAL_STORAGE_KEY);
   const prevLibraryItems = _LATEST_LIBRARY_ITEMS;
   try {
     const serializedItems = JSON.stringify(items);
     // cache optimistically so that consumers have access to the latest
     //  immediately
     _LATEST_LIBRARY_ITEMS = JSON.parse(serializedItems);
-    localStorage.setItem(LOCAL_STORAGE_KEY_LIBRARY, serializedItems);
+    await store.put(serializedItems, LOCAL_STORAGE_KEY_LIBRARY);
   } catch (e) {
     _LATEST_LIBRARY_ITEMS = prevLibraryItems;
     console.error(e);
   }
 };
 
-export const saveUsernameToLocalStorage = (username: string) => {
+export const saveUsernameToIndexedDb = async (username: string) => {
+  const store = (await getDb())
+    .transaction(LOCAL_STORAGE_KEY, "readwrite")
+    .objectStore(LOCAL_STORAGE_KEY);
+
   try {
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_COLLAB,
-      JSON.stringify({ username }),
-    );
+    await store.put(JSON.stringify({ username }), LOCAL_STORAGE_KEY_COLLAB);
   } catch (error) {
     // Unable to access window.localStorage
     console.error(error);
   }
 };
 
-export const importUsernameFromLocalStorage = (): string | null => {
+export const importUsernameFromIndexedDb = async (): Promise<string | null> => {
   try {
-    const data = localStorage.getItem(LOCAL_STORAGE_KEY_COLLAB);
+    const store = (await getDb())
+      .transaction(LOCAL_STORAGE_KEY, "readwrite")
+      .objectStore(LOCAL_STORAGE_KEY);
+    const data = await store.get(LOCAL_STORAGE_KEY_COLLAB);
     if (data) {
       return JSON.parse(data).username;
     }
@@ -76,32 +95,38 @@ export const importUsernameFromLocalStorage = (): string | null => {
   return null;
 };
 
-export const saveToLocalStorage = (
+export const saveToIndexedDb = async (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
 ) => {
   try {
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY,
+    const store = (await getDb())
+      .transaction(LOCAL_STORAGE_KEY, "readwrite")
+      .objectStore(LOCAL_STORAGE_KEY);
+    await store.put(
       JSON.stringify(elements.filter((element) => !element.isDeleted)),
+      LOCAL_STORAGE_KEY,
     );
-    localStorage.setItem(
+    await store.put(
+      JSON.stringify(clearAppStateForIndexedDB(appState)),
       LOCAL_STORAGE_KEY_STATE,
-      JSON.stringify(clearAppStateForLocalStorage(appState)),
     );
   } catch (error) {
-    // Unable to access window.localStorage
+    // Unable to access window.indexedDB
     console.error(error);
   }
 };
 
-export const importFromLocalStorage = () => {
+export const importFromIndexedDb = async () => {
   let savedElements = null;
   let savedState = null;
 
   try {
-    savedElements = localStorage.getItem(LOCAL_STORAGE_KEY);
-    savedState = localStorage.getItem(LOCAL_STORAGE_KEY_STATE);
+    const store = (await getDb())
+      .transaction(LOCAL_STORAGE_KEY, "readwrite")
+      .objectStore(LOCAL_STORAGE_KEY);
+    savedElements = await store.get(LOCAL_STORAGE_KEY);
+    savedState = await store.get(LOCAL_STORAGE_KEY_STATE);
   } catch (error) {
     // Unable to access localStorage
     console.error(error);
@@ -122,7 +147,7 @@ export const importFromLocalStorage = () => {
     try {
       appState = {
         ...getDefaultAppState(),
-        ...clearAppStateForLocalStorage(
+        ...clearAppStateForIndexedDB(
           JSON.parse(savedState) as Partial<AppState>,
         ),
       };

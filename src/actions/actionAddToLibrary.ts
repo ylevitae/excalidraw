@@ -2,7 +2,7 @@ import { register } from "./register";
 import { getSelectedElements } from "../scene";
 import { getNonDeletedElements } from "../element";
 import { deepCopyElement } from "../element/newElement";
-import { loadLibrary, saveLibrary } from "../data/localStorage";
+import { loadLibrary, saveLibrary } from "../data/indexedDB";
 
 export const actionAddToLibrary = register({
   name: "addToLibrary",

@@ -10,11 +10,11 @@ import { register as registerServiceWorker } from "./serviceWorker";
 
 import { debounce } from "./utils";
 import {
-  importFromLocalStorage,
-  importUsernameFromLocalStorage,
-  saveUsernameToLocalStorage,
-  saveToLocalStorage,
-} from "./data/localStorage";
+  importFromIndexedDb,
+  importUsernameFromIndexedDb,
+  saveUsernameToIndexedDb,
+  saveToIndexedDb,
+} from "./data/indexedDB";
 
 import { SAVE_TO_LOCAL_STORAGE_TIMEOUT } from "./time_constants";
 import { ImportedDataState } from "./data/types";
@@ -74,13 +74,13 @@ window.__EXCALIDRAW_SHA__ = REACT_APP_GIT_SHA;
 
 const saveDebounced = debounce(
   (elements: readonly ExcalidrawElement[], state: AppState) => {
-    saveToLocalStorage(elements, state);
+    saveToIndexedDb(elements, state);
   },
   SAVE_TO_LOCAL_STORAGE_TIMEOUT,
 );
 
 const onUsernameChange = (username: string) => {
-  saveUsernameToLocalStorage(username);
+  saveUsernameToIndexedDb(username);
 };
 
 const onBlur = () => {
@@ -119,12 +119,15 @@ function ExcalidrawApp() {
   } | null>(null);
 
   useEffect(() => {
-    setInitialState({
-      data: importFromLocalStorage(),
-      user: {
-        name: importUsernameFromLocalStorage(),
-      },
-    });
+    const badPractice = async () => {
+      setInitialState({
+        data: await importFromIndexedDb(),
+        user: {
+          name: await importUsernameFromIndexedDb(),
+        },
+      });
+    };
+    badPractice();
   }, []);
 
   // blur/unload
